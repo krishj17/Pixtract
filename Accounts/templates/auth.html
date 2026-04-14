@@ -1,0 +1,229 @@
+<!-- auth.html -->
+{% extends 'layout.html' %}
+{% block title %}Auth{% endblock %}
+
+{% block content %}
+<form id="csrf-form">
+    {% csrf_token %}
+</form>
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card p-4">
+
+            <div class="d-flex mb-3">
+                <button id="showLoginFormBtn" class="btn btn-outline-primary w-50">Login</button>
+                <button id="showRegisterFormBtn" class="btn btn-outline-secondary w-50">Register</button>
+            </div>
+
+            <div id="loginForm">
+                <h4 class="mb-3">Welcome Back</h4>
+                <input id="login_email" class="form-control mb-3" placeholder="Email" required>
+                <input id="login_password" class="form-control mb-3" placeholder="Password" required>
+                <button id="loginBtn" type="button" class="btn btn-primary w-100">Login</button>
+            </div>
+
+            <div id="registerForm" class="d-none">
+                <div id="verifyEmail">
+                    <h4 class="mb-3">Create Account</h4>
+                    <input id="reg_email" class="form-control mb-2" placeholder="Email" required>
+                    <button type="button" class="btn btn-success w-100" id="sendOtpBtn">Send OTP</button>
+                </div>
+                <div id="setPasswordSubForm">
+                    <input id="reg_password" class="form-control mb-2" type="password" placeholder="Password" required>
+                    <input id="reg_confirn_password" class="form-control mb-3" type="password" placeholder="Confirm Password" required>
+                    <button id="registerBtn" class="btn btn-success w-100">Register</button>
+                </div>
+            </div>
+
+            <div id="otpForm" class="d-none">
+                <h4 class="mb-3">Verify OTP</h4>
+                <input type="hidden" id="otp_email">
+                <input id="otp" class="form-control mb-3" name="otp" placeholder="Enter OTP" required>
+                <button id="verifyBtn" type="button" class="btn btn-success w-100">Verify</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Popup Modal -->
+<div class="modal fade" id="customPopup" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content popup-card">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="popupTitle">Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p id="popupMessage">Message goes here</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">
+                OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let csrf_token = $("input[name='csrfmiddlewaretoken']").val()
+
+
+// Toggle Login and Register Forms // -------------------------------------------------------------
+$("#showLoginFormBtn").click(()=>{
+    $("#loginForm").removeClass('d-none');
+    $("#registerForm").addClass('d-none');
+    $("#otpForm").addClass('d-none');
+});
+
+$("#showRegisterFormBtn").click(()=>{
+    $("#registerForm").removeClass('d-none');
+    $("#loginForm").addClass('d-none');
+    $("#otpForm").addClass('d-none');
+    // Hide setPassword initially.
+    $("#setPasswordSubForm").addClass('d-none'); 
+});
+// -------------------------------------------------------------
+
+
+// Hide all forms and display OTP form. 
+function display_otp_form(){
+    document.getElementById('registerForm').classList.add('d-none');
+    document.getElementById('loginForm').classList.add('d-none');
+    document.getElementById('otpForm').classList.remove('d-none');
+}
+
+// Hide email and show password form.
+function display_set_password_form(){
+    document.getElementById('setPasswordSubForm').classList.remove('d-none');
+    document.getElementById('registerForm').classList.remove('d-none');
+    document.getElementById('loginForm').classList.add('d-none');
+    document.getElementById('otpForm').classList.add('d-none');
+    document.getElementById('verifyEmail').classList.add('d-none');
+}
+
+
+// Registeration Section // -------------------------------------------------------------
+// Send email - receive otp
+document.querySelector("#sendOtpBtn").addEventListener("click", ()=>{
+    const data = {
+        "csrfmiddlewaretoken": csrf_token,
+        "email": $("#reg_email").val(),
+    };
+    //console.log("Data sent for otp:",data);
+
+    $.post("{% url 'register_email' %}", data,)
+    .done((response)=>{
+        //console.log("Response - email checking:",response);
+        showPopup("Success", response.message, "success");
+        display_otp_form()
+        $("#otp_email").val(response.user_email) // set email to hidden email field. 
+    })
+    .fail((xhr)=>{
+        showPopup("Error", xhr.responseJSON.error, "error");
+    });
+});
+
+// Send email, otp - Receive email verification, new csrftoken (logged in token)
+document.querySelector("#verifyBtn").addEventListener("click", ()=>{
+    const data = {
+        "csrfmiddlewaretoken": csrf_token,
+        "email": $("#otp_email").val(),
+        "otp": $("#otp").val(),
+    };
+    //console.log("Data sent for otp verification:",data);
+
+    $.post("{% url 'verify_otp' %}", data)
+    .done((response)=>{
+        //console.log("Response - otp verification:",response);
+        showPopup("Success", response.message, "success");
+        csrf_token = response.new_csrf; // update csrf with new session token.
+        //console.log("New csrf from backend: ", csrf_token)
+        if(response.is_new_user){
+            display_set_password_form();
+        } else{
+            window.location.href = "{% url 'dashboard' %}"
+        }
+    })
+    .fail((xhr)=>{
+        showPopup("Error", xhr.responseJSON.error, "error");
+    });
+})
+
+// Send password, confirm password - Receive login (session).
+document.querySelector("#registerBtn").addEventListener("click", ()=>{
+    const data = {
+        "csrfmiddlewaretoken": csrf_token,
+        "password": $("#reg_password").val(),
+        "confirm_password": $("#reg_confirn_password").val(),
+    };
+    //console.log("Data sent to set password:",data);
+
+    $.post("{% url 'set_password' %}", data)
+    .done((response)=>{
+        //console.log("Response - password setting:",response);
+        showPopup("Success", response.message, "success");
+        window.location.href = "{% url 'dashboard' %}"
+    })
+    .fail((xhr)=>{
+        showPopup("Error", xhr.responseJSON.error, "error");
+    })
+});
+
+
+// Login Section // -------------------------------------------------------------
+document.querySelector("#loginBtn").addEventListener("click", ()=>{
+    const data = {
+        "csrfmiddlewaretoken": csrf_token,
+        "email": $("#login_email").val(),
+        "password": $("#login_password").val()
+    };
+    console.log(data);
+
+    $.post("{% url 'login' %}", data)
+    .done((response)=>{
+        //console.log("Response - password setting:",response);
+        if(response.user_email){
+            showPopup("Success", response.message, "success");
+            display_otp_form()
+            $("#otp_email").val(response.user_email) // set email to hidden email field. 
+        } else{
+            showPopup("Success", response.message, "success");
+            window.location.href = "{% url 'dashboard' %}"
+        };
+    })
+    .fail((xhr)=>{
+        showPopup("Error", xhr.responseJSON.error, "error");
+    })
+})  
+
+
+
+// Popup
+function showPopup(title, message, type="info") {
+    const modal = new bootstrap.Modal(document.getElementById('customPopup'));
+
+    document.getElementById('popupTitle').innerText = title;
+    document.getElementById('popupMessage').innerText = message;
+
+    // Change color based on type
+    const header = document.querySelector('.modal-header');
+
+    header.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'text-white');
+
+    if (type === "success") {
+        header.classList.add('bg-success', 'text-white');
+    } else if (type === "error") {
+        header.classList.add('bg-danger', 'text-white');
+    } else if (type === "warning") {
+        header.classList.add('bg-warning');
+    }
+
+    modal.show();
+}
+
+</script>
+{% endblock %}
+
+

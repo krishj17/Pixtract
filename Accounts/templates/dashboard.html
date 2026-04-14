@@ -1,0 +1,81 @@
+<!-- dashboard.html -->
+{% extends 'layout.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+
+    <div class="col-md-4">
+        <div class="stat-card">
+            <h6>API Requests Today</h6>
+            <h2>{{ user.requests_today }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="stat-card">
+            <h6>Last Reset</h6>
+            <h5>{{ user.last_reset }}</h5>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="stat-card">
+            <h6>Status</h6>
+            <h5 class="text-success">Active</h5>
+        </div>
+    </div>
+
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card p-4">
+            <h5>Usage Graph</h5>
+            <canvas id="usageChart"></canvas>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h5>API Key</h5>
+            <code class="d-block mb-3">{{ user.api_key }}</code>
+
+            <form method="POST" action="{% url 'regen_key' %}">
+                {% csrf_token %}
+                <button class="btn btn-warning w-100">Regenerate Key</button>
+            </form>
+
+            <hr>
+
+            <h6>Dev Notes</h6>
+            <p class="text-muted">{{ user.dev_note }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+const ctx = document.getElementById('usageChart');
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+            label: 'API Usage',
+            data: [12, 19, 7, 15, 10, 5, 8],
+            borderWidth: 2,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+</script>
+
+{% endblock %}
