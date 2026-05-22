@@ -121,6 +121,11 @@ STATIC_URL = 'static/'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': [],
+    "DEFAULT_THROTTLE_RATES": {
+        "unsigned": "50/day",
+        "signed_burst": "10/min",
+        "signed": "500/day",
+    }
 }
 
 
@@ -138,7 +143,7 @@ EMAIL_PORT = os.getenv("EMAIL_PORT")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
-# Redis Setup
+# Upstash Redis Setup (Uncomment to use it)
 # CACHES = {
 #     "default": {
 #         "BACKEND": "django_redis.cache.RedisCache",
