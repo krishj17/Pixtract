@@ -1,16 +1,20 @@
+import uuid
+
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-from Accounts.models import OTP, User
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.conf import settings
-from random import randint
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.middleware.csrf import get_token
+from django.core.cache import cache
+from random import randint
+
+from Accounts.models import User
 from Accounts.utils import check_otp
-import uuid
+
 
 @login_required(login_url="auth")
 def dashboard(request):
@@ -30,12 +34,8 @@ def register_email(request):
 
         # Send otp:
         otp = randint(1000,9999)
-        # hashing logic...
+        cache.set(key=f"otp_{email}", value=otp, timeout=300) # expires in 5 minutes.
         send_mail("Pixtract OTP", f"Dear User your OTP for registeration is: {otp}", settings.EMAIL_HOST_USER, [email])
-        OTP.objects.create(
-            email = email,
-            otp_hash = otp
-        )
 
         return JsonResponse({"status":"success", "message":"otp sent.", "user_email": email}, status=200)
 
@@ -55,10 +55,11 @@ def verify_otp(request):
     user, created = User.objects.get_or_create(
         email = request.POST.get("email")
     )
-    print(user)
+    
     login(request, user)
     new_csrf = get_token(request)
     print("new_csrf token:--",new_csrf)
+
     if created:
         return JsonResponse({
             "status": "success", 
@@ -119,15 +120,13 @@ def user_login(request):
         except User.DoesNotExist:
             return JsonResponse({"status":"error", "error":"Account with the Email dosen't exist."}, status=404)
         
-        # Check if password exist.
+        # If no password, send otp email.
         if user.password is None:
             # Send otp:
             otp = randint(1000,9999)
+            cache.set(key=f"otp_{email}", value=otp, timeout=300) # expires in 5 minutes.
             send_mail("Pixtract OTP", f"Dear User your OTP for Login is: {otp}", settings.EMAIL_HOST_USER, [email])
-            OTP.objects.create(
-                email = email,
-                otp_hash = otp
-            )
+
             return JsonResponse({"status":"success", "message":"Login OTP Sent to your Email.", "user_email": email}, status=200)
 
         # Login user if everything is ok.

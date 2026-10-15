@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Accounts.models import User, UsageData, OTP
+from Accounts.models import User, UsageData
 # Register your models here.
 
 class UserDisplay(admin.ModelAdmin):
@@ -7,4 +7,3 @@ class UserDisplay(admin.ModelAdmin):
 
 admin.site.register(User, UserDisplay)
 admin.site.register(UsageData)
-admin.site.register(OTP)

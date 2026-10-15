@@ -1,23 +1,19 @@
-from django.http import JsonResponse
-from django.utils import timezone
-from Accounts.models import OTP
+from django.core.cache import cache
 
 
 def check_otp(request) -> dict:
-    email = request.POST.get("email").strip()
-    otp = request.POST.get("otp").strip()
+    email = request.POST.get("email")
+    otp = request.POST.get("otp")
 
-    otp_obj = OTP.objects.filter(email=email).latest("id")
+    if not email or not otp:
+        return {"status": "error", "error": "Email and OTP are required", "code": 400}
+
+    otp_cache = cache.get(f'otp_{email}')
+    if otp_cache is None:
+        return {"status": "error", "error": "OTP expired or not found", "code": 404}
     
-    if otp_obj is None:
-        return {"status": "error", "error": "No OTP found", "code":404}
-    
-    # check expiry
-    if timezone.now() > otp_obj.expires_at:
-        return {"status": "error", "error": "OTP expired", "code":410}
-    
-     # check OTP
-    if otp_obj.otp_hash != otp:
+    # check OTP
+    if str(otp_cache) != otp:
         return {"status": "error", "error": "Invalid OTP", "code":400}
     
     return {"status":"success", "message":"OTP Verified.", "code":200}

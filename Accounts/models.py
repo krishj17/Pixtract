@@ -42,9 +42,4 @@ class UsageData(models.Model):
 def otp_expiry():
     return timezone.now() + timedelta(minutes=5)
 
-class OTP(models.Model):
-    email = models.EmailField(max_length=254)
-    otp_hash = models.CharField(max_length=254)
-    expires_at = models.DateTimeField(default=otp_expiry)
-
     
