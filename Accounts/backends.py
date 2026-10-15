@@ -1,5 +1,5 @@
 from django.contrib.auth.backends import ModelBackend
-from .models import User
+from Accounts.models import User
 
 # Custion authenticate logic for email.
 class EmailBackend(ModelBackend):
